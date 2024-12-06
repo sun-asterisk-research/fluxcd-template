@@ -1,0 +1,6 @@
+.groups:
+  human: &human
+paths:
+  - path_regex: "tg/clusters/**/*.{tfvars,tfstate}"
+    recipients: *human
+recipients:

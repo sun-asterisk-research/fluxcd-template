@@ -1,0 +1,12 @@
+nameReference:
+- kind: Secret
+  version: v1
+  fieldSpecs:
+  - kind: HelmRelease
+    path: spec/valuesFrom/name
+  - kind: HelmRepository
+    path: spec/secretRef/name
+  - kind: ImageRepository
+    path: spec/secretRef/name
+  - kind: OCIRepository
+    path: spec/secretRef/name

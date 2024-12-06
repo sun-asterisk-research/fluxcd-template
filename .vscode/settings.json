@@ -1,0 +1,29 @@
+{
+  "files.readonlyInclude": {
+    "clusters/*/flux-system/*": true,
+  },
+  "search.useIgnoreFiles": false,
+  "search.exclude": {
+    //
+    "**/*.enc.*": true,
+    "**/values*.yaml": false,
+    "**/secret.*": false,
+    // Flux system files
+    "clusters/**/flux-system": true,
+    // Git ignored files
+    "**/.terraform/*": true,
+    "**/.terragrunt-cache/*": true,
+    "*.tfstate": true,
+    "*.tfstate.*": true,
+    "*.tfvars": true,
+    "*.tfvars.json": true,
+    "override.tf": true,
+    "override.tf.json": true,
+    "*_override.tf": true,
+    "*_override.tf.json": true,
+    "*tfplan*": true,
+    ".terraformrc": true,
+    "terraform.rc": true,
+    ".bin": true,
+  }
+}
