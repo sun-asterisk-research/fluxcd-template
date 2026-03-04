@@ -1,0 +1,46 @@
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+patches:
+  - target:
+      kind: OCIRepository
+    patch: |
+      $patch: delete
+      kind: OCIRepository
+      metadata:
+        name: unimportant
+  - target:
+      kind: HelmRelease
+    patch: |
+      $patch: delete
+      kind: HelmRelease
+      metadata:
+        name: unimportant
+  - target:
+      kind: ImageRepository
+    patch: |
+      $patch: delete
+      kind: ImageRepository
+      metadata:
+        name: unimportant
+  - target:
+      kind: ImagePolicy
+    patch: |
+      $patch: delete
+      kind: ImagePolicy
+      metadata:
+        name: unimportant
+  - target:
+      kind: ImageUpdateAutomation
+    patch: |
+      $patch: delete
+      kind: ImageUpdateAutomation
+      metadata:
+        name: unimportant
+  - target:
+      kind: Secret
+      name: helm-release-.+
+    patch: |
+      $patch: delete
+      kind: Secret
+      metadata:
+        name: unimportant

@@ -1,0 +1,44 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: redis
+spec:
+  interval: 1h
+  url: oci://registry-1.docker.io/bitnamicharts/redis
+  ref:
+    tag: 25.3.2
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: redis
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: redis
+  interval: 1h
+  valuesFrom:
+    - kind: Secret
+      name: helm-release-redis
+      optional: true
+    - kind: Secret
+      name: helm-release-redis
+      valuesKey: redis-password
+      targetPath: auth.password
+      optional: true
+  values:
+    image:
+      repository: bitnamilegacy/redis
+    architecture: standalone
+    master:
+      resourcesPreset: none
+    replica:
+      resourcesPreset: none
+    sentinel:
+      resourcesPreset: none
+    metrics:
+      resourcesPreset: none
+    sysctl:
+      resourcesPreset: none
+    volumePermissions:
+      resourcesPreset: none

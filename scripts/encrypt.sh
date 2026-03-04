@@ -6,4 +6,6 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
 COMMAND="${1:-apply}"
 
-terragrunt --terragrunt-working-dir tg/secrets/encrypt "$COMMAND"
+export TG_WORKING_DIR="tg/secrets/encrypt"
+
+terragrunt "$COMMAND"

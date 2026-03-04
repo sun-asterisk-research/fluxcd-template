@@ -1,0 +1,29 @@
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImageUpdateAutomation
+metadata:
+  name: imageupdateautomation
+spec:
+  interval: 1m0s
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  git:
+    checkout:
+      ref:
+        branch: main
+    commit:
+      author:
+        email: name@domain.test
+        name: FluxCD bot
+      messageTemplate: |-
+        chore({{ if .Values.cluster }}{{ .Values.cluster }}, {{ end }}{{ .AutomationObject.Name }}): automated image updates (Flux)
+
+        {{ range $resource, $changes := .Changed.Objects -}}
+        {{ $resource.Kind }} {{ $resource.Name }}:
+        {{ range $_, $change := $changes -}}
+        - {{ regexReplaceAll ":" (regexReplaceAll "^[^:]+:([^:]+:[^:]+)$" $change.Setter "$1") "/" }}: {{ $change.OldValue }} -> {{ $change.NewValue }}
+        {{ end -}}
+        {{ end -}}
+  update:
+    strategy: Setters

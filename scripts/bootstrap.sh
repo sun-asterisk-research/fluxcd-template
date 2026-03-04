@@ -11,11 +11,13 @@ git_ref="$(git symbolic-ref -q HEAD)"
 git_upstream="$(git for-each-ref --format='%(upstream:short)' "$git_ref")"
 
 TF_VAR_git_remote="$(echo "$git_upstream" | cut -d/ -f1)"
-TF_VAR_git_url="$(git remote get-url "$TF_VAR_git_remote")"
+TF_VAR_git_url="$(git remote get-url "$TF_VAR_git_remote" | sed -E 's#^([^@]+)@([^:]+):#ssh://\1@\2/#')"
 TF_VAR_git_branch="$(echo "$git_upstream" | cut -d/ -f2)"
 
 export TF_VAR_git_remote
 export TF_VAR_git_url
 export TF_VAR_git_branch
+export TG_NO_AUTO_APPROVE=true
+export TG_WORKING_DIR="$DIR/../tg/clusters/$CLUSTER"
 
-terragrunt --terragrunt-working-dir "$DIR/../tg/clusters/$CLUSTER" "$COMMAND"
+terragrunt $COMMAND

@@ -1,19 +1,21 @@
 MODULES_SOURCE_BASE_URL ?= git::git@github.com:sun-asterisk-research/flux-tf.git//modules
-MODULES_SOURCE_REF ?= f5d55991c0c9604cc18c7f93321c0b5c2f43fd30
+MODULES_SOURCE_REF ?= f71a4fceea24e87a47df9cc5dd9bb37d0a62ab71
+
+CLUSTER ?= production
 
 ifdef LOCAL_MODULES_SOURCE
-	BOOTSTRAP_TERRAGRUNT_SOURCE := $(LOCAL_MODULES_SOURCE)/bootstrap
-	DECRYPT_TERRAGRUNT_SOURCE := $(LOCAL_MODULES_SOURCE)/sops_decrypt
-	ENCRYPT_TERRAGRUNT_SOURCE := $(LOCAL_MODULES_SOURCE)/sops_encrypt
+	BOOTSTRAP_TG_SOURCE := $(LOCAL_MODULES_SOURCE)/bootstrap
+	DECRYPT_TG_SOURCE := $(LOCAL_MODULES_SOURCE)/sops_decrypt
+	ENCRYPT_TG_SOURCE := $(LOCAL_MODULES_SOURCE)/sops_encrypt
 else
-	BOOTSTRAP_TERRAGRUNT_SOURCE := $(MODULES_SOURCE_BASE_URL)/bootstrap?ref=$(MODULES_SOURCE_REF)
-	DECRYPT_TERRAGRUNT_SOURCE := $(MODULES_SOURCE_BASE_URL)/sops_decrypt?ref=$(MODULES_SOURCE_REF)
-	ENCRYPT_TERRAGRUNT_SOURCE := $(MODULES_SOURCE_BASE_URL)/sops_encrypt?ref=$(MODULES_SOURCE_REF)
+	BOOTSTRAP_TG_SOURCE := $(MODULES_SOURCE_BASE_URL)/bootstrap?ref=$(MODULES_SOURCE_REF)
+	DECRYPT_TG_SOURCE := $(MODULES_SOURCE_BASE_URL)/sops_decrypt?ref=$(MODULES_SOURCE_REF)
+	ENCRYPT_TG_SOURCE := $(MODULES_SOURCE_BASE_URL)/sops_encrypt?ref=$(MODULES_SOURCE_REF)
 endif
 
 export PATH := $(shell pwd)/.bin:$(PATH)
 export DEBUG ?= false
-export TERRAGRUNT_PROVIDER_CACHE ?= true
+export TG_PROVIDER_CACHE ?= true
 export NO_AUTO_APPROVE ?= false
 export COMMAND ?= apply
 
@@ -21,7 +23,7 @@ bootstrap:
 ifndef CLUSTER
 	$(error CLUSTER is undefined)
 endif
-	@TERRAGRUNT_SOURCE=$(BOOTSTRAP_TERRAGRUNT_SOURCE) ./scripts/bootstrap.sh $(COMMAND) $(CLUSTER)
+	@TG_SOURCE=$(BOOTSTRAP_TG_SOURCE) ./scripts/bootstrap.sh "$(COMMAND)" "$(CLUSTER)"
 
 bootstrap-%:
 	@$(MAKE) -s bootstrap CLUSTER=$*
@@ -36,10 +38,10 @@ endif
 	@./scripts/cluster-init.sh $(CLUSTER)
 
 decrypt:
-	@TERRAGRUNT_SOURCE=$(DECRYPT_TERRAGRUNT_SOURCE) ./scripts/decrypt.sh $(COMMAND)
+	@TG_SOURCE=$(DECRYPT_TG_SOURCE) ./scripts/decrypt.sh $(COMMAND)
 
 encrypt:
-	@TERRAGRUNT_SOURCE=$(ENCRYPT_TERRAGRUNT_SOURCE) ./scripts/encrypt.sh $(COMMAND)
+	@TG_SOURCE=$(ENCRYPT_TG_SOURCE) ./scripts/encrypt.sh $(COMMAND)
 
 sops-add: TYPE=age
 sops-add: GROUPS=human
@@ -53,19 +55,21 @@ endif
 ifndef CLUSTER
 	$(error no CLUSTER provided)
 endif
-ifndef NS
-	flux build kustomization $(KS) --kustomization-file ./clusters/$(CLUSTER)/$(KS).yaml --path ./$(KS)/$(CLUSTER)/ --dry-run
-else
-	flux build kustomization $(KS) --kustomization-file ./clusters/$(CLUSTER)/$(KS).yaml --path ./$(KS)/$(CLUSTER)/ --dry-run | yq 'select(.metadata.namespace == "$(NS)" or (.kind == "Namespace" and .metadata.name == "$(NS)"))'
-endif
+	@KS_FILE="./clusters/$(CLUSTER)/$(KS).yaml"; \
+	KS_PATH="$(shell yq -r '.spec.path' "./clusters/$(CLUSTER)/$(KS).yaml")"; \
+	IGNORE_PATHS=$(shell [ -n "$(PATHS)" ] && echo "--ignore-paths='*,$(shell echo $(PATHS) | sed 's/[^,][^,]*/\!&/g')'"); \
+	flux build kustomization $(notdir $(KS)) --kustomization-file "$$KS_FILE" --path "$$KS_PATH" $$IGNORE_PATHS --dry-run | yq
 
-.PHONY: apps infrastructure
+.PHONY: apps infrastructure rbac
 
 apps:
 	@$(MAKE) -s build KS=apps
 
 infrastructure:
 	@$(MAKE) -s build KS=infrastructure
+
+rbac:
+	@$(MAKE) -s build KS=rbac
 
 install-tools: ONLY_MISSING ?= false
 install-tools:

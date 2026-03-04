@@ -1,13 +1,13 @@
 locals {
   tg_root_dir = "${get_repo_root()}/tg"
 
-  backend_tfvars_files = [for file in [
-    "${get_parent_terragrunt_dir()}/backend.default.tfvars",
-    "${get_parent_terragrunt_dir()}/backend.tfvars",
-    "${get_parent_terragrunt_dir()}/backend.tfvars.json"
+  terragrunt_tfvars_files = [for file in [
+    "${get_parent_terragrunt_dir()}/terragrunt.default.tfvars",
+    "${get_parent_terragrunt_dir()}/terragrunt.tfvars",
+    "${get_parent_terragrunt_dir()}/terragrunt.tfvars.json"
   ] : file if fileexists(file)]
 
-  backend_config = merge({
+  config_vars = merge({
     type = "local"
 
     local = {
@@ -16,8 +16,11 @@ locals {
 
     s3 = {}
   }, [
-    for file in local.backend_tfvars_files : jsondecode(read_tfvars_file(file))
+    for file in local.terragrunt_tfvars_files : jsondecode(read_tfvars_file(file))
   ]...)
+
+  backend_config = local.config_vars.backend
+  kubernetes_config = local.config_vars.kubernetes
 
   backend_local_enabled = local.backend_config.type == "local"
   backend_s3_enabled = local.backend_config.type == "s3" && lookup(local.backend_config.s3, "endpoint", "") == null
@@ -38,20 +41,6 @@ terraform {
       "${get_parent_terragrunt_dir()}/terraform.tfvars.json"
     ]
   }
-
-  after_hook "after_bootstrap" {
-    commands = [
-      "apply",
-    ]
-
-    execute = [
-      "sh",
-      "-c",
-      <<-EOF
-      git pull --ff-only $TF_VAR_git_remote $TF_VAR_git_branch
-      EOF
-    ]
-  }
 }
 
 download_dir = "${local.tg_root_dir}/.terragrunt-cache"
@@ -67,6 +56,27 @@ inputs = {
   # Enable extra components 'image-reflector-controller' and 'image-automation-controller'
   flux_enable_image_automation = true
 }
+
+generate "provider" {
+  path      = "providers_config.tf"
+  if_exists = "overwrite"
+  contents  = <<EOF
+  provider "helm" {
+    kubernetes = {
+      host                   = "${local.kubernetes_config.host}"
+      cluster_ca_certificate = base64decode("${local.kubernetes_config.cluster_ca_certificate}")
+      token                  = "${local.kubernetes_config.token}"
+    }
+  }
+
+  provider "kubernetes" {
+    host                   = "${local.kubernetes_config.host}"
+    cluster_ca_certificate = base64decode("${local.kubernetes_config.cluster_ca_certificate}")
+    token                  = "${local.kubernetes_config.token}"
+  }
+  EOF
+}
+
 
 generate "backend_local" {
   path      = "backend.tf"

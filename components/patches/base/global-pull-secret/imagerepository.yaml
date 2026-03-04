@@ -1,0 +1,9 @@
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImageRepository
+metadata:
+  name: imagerepository # not important, this patch should be used with labelSelector and annotationSelector
+  annotations:
+    kustomize-applied-patch/pull-secret: global
+spec:
+  secretRef:
+    name: global-pull-secret

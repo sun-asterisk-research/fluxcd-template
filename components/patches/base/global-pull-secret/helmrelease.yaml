@@ -1,0 +1,11 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: helmrelease # not important, this patch should be used with labelSelector and annotationSelector
+  annotations:
+    kustomize-applied-patch/pull-secret: global
+spec:
+  values:
+    global:
+      imagePullSecrets:
+        - global-pull-secret

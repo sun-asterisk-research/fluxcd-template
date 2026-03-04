@@ -1,0 +1,29 @@
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+patches:
+  - path: helmrelease.yaml
+    target:
+      group: helm.toolkit.fluxcd.io
+      version: v2
+      kind: HelmRelease
+      annotationSelector: kustomize-patch/pull-secret=global
+  - path: ocirepository.yaml
+    target:
+      group: source.toolkit.fluxcd.io
+      version: v1
+      kind: OCIRepository
+      annotationSelector: kustomize-patch/pull-secret=global
+  - path: imagerepository.yaml
+    target:
+      group: image.toolkit.fluxcd.io
+      version: v1
+      kind: ImageRepository
+      annotationSelector: kustomize-patch/pull-secret=global
+  # Clean up the annotation
+  - target:
+      annotationSelector: kustomize-patch/pull-secret=global
+    patch: |-
+      - op: remove
+        path: /metadata/annotations/kustomize-patch~1pull-secret
+configurations:
+  - nameReference.yaml
