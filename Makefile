@@ -1,5 +1,5 @@
 MODULES_SOURCE_BASE_URL ?= git::git@github.com:sun-asterisk-research/flux-tf.git//modules
-MODULES_SOURCE_REF ?= f71a4fceea24e87a47df9cc5dd9bb37d0a62ab71
+MODULES_SOURCE_REF ?= a786ef2205ae342285a27a00b9eaa63183549607
 
 CLUSTER ?= production
 
