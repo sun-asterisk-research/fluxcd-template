@@ -8,19 +8,32 @@ locals {
   ] : file if fileexists(file)]
 
   config_vars = merge({
-    type = "local"
+    backend = {
+      type = "local"
 
-    local = {
-      path_prefix = ""
+      local = {
+        path_prefix = ""
+      }
+
+      s3 = {}
     }
-
-    s3 = {}
   }, [
     for file in local.terragrunt_tfvars_files : jsondecode(read_tfvars_file(file))
   ]...)
 
   backend_config = local.config_vars.backend
   kubernetes_config = local.config_vars.kubernetes
+
+  # Only render the connection attributes that are actually set, so partial
+  # configs (e.g. host + insecure only) don't break on null interpolation.
+  kubernetes_provider_attrs = join("\n", compact([
+    "host                   = \"${local.kubernetes_config.host}\"",
+    lookup(local.kubernetes_config, "cluster_ca_certificate", null) != null ? "cluster_ca_certificate = base64decode(\"${local.kubernetes_config.cluster_ca_certificate}\")" : "",
+    lookup(local.kubernetes_config, "token", null) != null ? "token                  = \"${local.kubernetes_config.token}\"" : "",
+    lookup(local.kubernetes_config, "client_certificate", null) != null ? "client_certificate     = base64decode(\"${local.kubernetes_config.client_certificate}\")" : "",
+    lookup(local.kubernetes_config, "client_key", null) != null ? "client_key             = base64decode(\"${local.kubernetes_config.client_key}\")" : "",
+    lookup(local.kubernetes_config, "insecure", null) != null ? "insecure               = ${local.kubernetes_config.insecure}" : "",
+  ]))
 
   backend_local_enabled = local.backend_config.type == "local"
   backend_s3_enabled = local.backend_config.type == "s3" && lookup(local.backend_config.s3, "endpoint", "") == null
@@ -61,20 +74,16 @@ generate "provider" {
   path      = "providers_config.tf"
   if_exists = "overwrite"
   contents  = <<EOF
-  provider "helm" {
-    kubernetes = {
-      host                   = "${local.kubernetes_config.host}"
-      cluster_ca_certificate = base64decode("${local.kubernetes_config.cluster_ca_certificate}")
-      token                  = "${local.kubernetes_config.token}"
-    }
+provider "helm" {
+  kubernetes = {
+    ${indent(4, local.kubernetes_provider_attrs)}
   }
+}
 
-  provider "kubernetes" {
-    host                   = "${local.kubernetes_config.host}"
-    cluster_ca_certificate = base64decode("${local.kubernetes_config.cluster_ca_certificate}")
-    token                  = "${local.kubernetes_config.token}"
-  }
-  EOF
+provider "kubernetes" {
+  ${indent(2, local.kubernetes_provider_attrs)}
+}
+EOF
 }
 
 
